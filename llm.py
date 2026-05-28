@@ -13,20 +13,16 @@ client = OpenAI(
 def generate_response(messages):
 
     system_prompt = """
-You are a helpful assistant.
+You are an assistant with access to a calculator.
 
-You have access to one tool:
+Rules:
+- If math/calculation is required, respond ONLY:
+  TOOL: calculator: <expression>
 
-calculator(expression)
+- If no tool is required, answer normally.
 
-If the user asks a math question, respond ONLY in this format:
-
-TOOL: calculator: <expression>
-
-Example:
-TOOL: calculator: 27 * 43
-
-For normal conversation, answer normally.
+Never call tools for greetings like:
+"hi", "hello", "hey"
 """
 
     response = client.chat.completions.create(

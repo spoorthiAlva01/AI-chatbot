@@ -28,6 +28,14 @@ def llm_node(state: ChatState):
         "llm_output": response
     }
 
+def router_node(state: ChatState):
+
+    llm_output = state["llm_output"]
+
+    if llm_output.startswith("TOOL:"):
+        return "tool_executor"
+
+    return END
 
 # Node 2 — Execute requested tool
 def tool_executor_node(state: ChatState):
@@ -77,23 +85,31 @@ graph_builder = StateGraph(ChatState)
 
 graph_builder.add_node("llm", llm_node)
 graph_builder.add_node("tool_executor", tool_executor_node)
-graph_builder.add_node(
-    "final_response",
-    final_response_node
-)
+graph_builder.add_node("final_response", final_response_node)
 
 graph_builder.add_edge(START, "llm")
-graph_builder.add_edge("llm", "tool_executor")
+
+graph_builder.add_conditional_edges(
+    "llm",
+    router_node
+)
+
 graph_builder.add_edge("tool_executor", "final_response")
-graph_builder.add_edge( "final_response",END)
+
+graph_builder.add_edge("final_response", END)
 
 graph = graph_builder.compile()
 
+while True:
 
-result = graph.invoke(
-    {
-        "message": "27 * 43"
-    }
-)
+    user_message = input("You: ")
+
+    result = graph.invoke(
+        {
+            "message": user_message
+        }
+    )
+
+    print("GROQ:", result["llm_output"])
 
 print(result)
