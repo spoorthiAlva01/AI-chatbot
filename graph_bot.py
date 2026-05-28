@@ -1,6 +1,8 @@
-from typing import TypedDict
+from typing import TypedDict, Optional
 from langgraph.graph import StateGraph, START, END
 from tools.calculator import calculate
+from llm import generate_response
+
 
 class ChatState(TypedDict):
     message: str
@@ -8,29 +10,26 @@ class ChatState(TypedDict):
     tool_result: Optional[str]
 
 
-def chatbot_node(state: ChatState):
+# Node 1 — Ask LLM what to do
+def llm_node(state: ChatState):
 
-    print("Running chatbot node")
+    print("Running LLM node")
+
+    response = generate_response(
+        [
+            {
+                "role": "user",
+                "content": state["message"]
+            }
+        ]
+    )
 
     return {
-        "response": f"User said: {state['message']}"
+        "llm_output": response
     }
 
 
-def calculator_node(state: ChatState):
-
-    print("Running calculator node")
-
-    result = eval(state["message"])
-
-    return {
-        "result": result
-    }
-
-
-
-
-
+# Node 2 — Execute requested tool
 def tool_executor_node(state: ChatState):
 
     print("Running tool executor node")
@@ -54,45 +53,46 @@ def tool_executor_node(state: ChatState):
     return {
         "tool_result": None
     }
+def final_response_node(state: ChatState):
+
+    print("Running final response node")
+
+    tool_result = state["tool_result"]
+
+    response = generate_response(
+        [
+            {
+                "role": "user",
+                "content": f"The calculator returned: {tool_result}. Respond naturally to the user."
+            }
+        ]
+    )
+
+    return {
+        "llm_output": response
+    }
 
 
 graph_builder = StateGraph(ChatState)
 
+graph_builder.add_node("llm", llm_node)
+graph_builder.add_node("tool_executor", tool_executor_node)
 graph_builder.add_node(
-    "chatbot",
-    chatbot_node
+    "final_response",
+    final_response_node
 )
 
-graph_builder.add_node(
-    "calculator",
-    calculator_node
-)
-
-
-graph_builder.add_edge(
-    START,
-    "chatbot"
-)
-
-
-graph_builder.add_conditional_edges(
-    "chatbot",
-    route_message
-)
-
-
-graph_builder.add_edge(
-    "calculator",
-    END
-)
-
+graph_builder.add_edge(START, "llm")
+graph_builder.add_edge("llm", "tool_executor")
+graph_builder.add_edge("tool_executor", "final_response")
+graph_builder.add_edge( "final_response",END)
 
 graph = graph_builder.compile()
 
 
 result = graph.invoke(
     {
-        "message": "27 43"
+        "message": "27 * 43"
     }
 )
 
