@@ -1,28 +1,42 @@
-from tools.calculator import calculate
+from openai import OpenAI
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
+
+client = OpenAI(
+    api_key=os.getenv("GROQ_API_KEY"),
+    base_url="https://api.groq.com/openai/v1"
+)
 
 
 def generate_response(messages):
 
-    latest_message = messages[-1]["content"].lower()
+    system_prompt = """
+You are a helpful assistant.
 
-    # calculator tool
-    if "*" in latest_message:
-        result = calculate(latest_message)
-        return f"The answer is {result}"
+You have access to one tool:
 
-    # memory retrieval
-    if "what is my name" in latest_message:
+calculator(expression)
 
-        for msg in messages:
+If the user asks a math question, respond ONLY in this format:
 
-            content = msg["content"].lower()
+TOOL: calculator: <expression>
 
-            if "my name is" in content:
-                name = msg["content"].split("my name is")[-1].strip()
-                return f"Your name is {name}"
+Example:
+TOOL: calculator: 27 * 43
 
-            elif "i am" in content:
-                name = msg["content"].split("I am")[-1].strip()
-                return f"Your name is {name}"
+For normal conversation, answer normally.
+"""
 
-    return f"You said: {messages[-1]['content']}"
+    response = client.chat.completions.create(
+        model="llama-3.3-70b-versatile",
+        messages=[
+            {
+                "role": "system",
+                "content": system_prompt
+            }
+        ] + messages
+    )
+
+    return response.choices[0].message.content

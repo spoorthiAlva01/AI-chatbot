@@ -1,15 +1,12 @@
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
 
-
-# shared state
 class ChatState(TypedDict):
     message: str
-    response: str
-    result: int
+    llm_output: str
+    tool_result: Optional[str]
 
 
-# node 1
 def chatbot_node(state: ChatState):
 
     print("Running chatbot node")
@@ -19,7 +16,6 @@ def chatbot_node(state: ChatState):
     }
 
 
-# node 2
 def calculator_node(state: ChatState):
 
     print("Running calculator node")
@@ -31,7 +27,17 @@ def calculator_node(state: ChatState):
     }
 
 
-# build graph
+# router
+def route_message(state: ChatState):
+
+    message = state["message"]
+
+    if "*" in message:
+        return "calculator"
+
+    return END
+
+
 graph_builder = StateGraph(ChatState)
 
 graph_builder.add_node(
@@ -50,22 +56,25 @@ graph_builder.add_edge(
     "chatbot"
 )
 
-graph_builder.add_edge(
+
+graph_builder.add_conditional_edges(
     "chatbot",
-    "calculator"
+    route_message
 )
+
 
 graph_builder.add_edge(
     "calculator",
     END
 )
 
+
 graph = graph_builder.compile()
 
 
 result = graph.invoke(
     {
-        "message": "27 * 43"
+        "message": "27 43"
     }
 )
 
