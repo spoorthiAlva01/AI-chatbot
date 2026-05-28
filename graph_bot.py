@@ -4,8 +4,12 @@ from tools.calculator import calculate
 from llm import generate_response
 
 
+from typing import TypedDict, Optional
+
+
 class ChatState(TypedDict):
     message: str
+    history: list
     llm_output: str
     tool_result: Optional[str]
 
@@ -15,14 +19,9 @@ def llm_node(state: ChatState):
 
     print("Running LLM node")
 
-    response = generate_response(
-        [
-            {
-                "role": "user",
-                "content": state["message"]
-            }
-        ]
-    )
+    messages = state["history"]
+
+    response = generate_response(messages)
 
     return {
         "llm_output": response
@@ -61,6 +60,8 @@ def tool_executor_node(state: ChatState):
     return {
         "tool_result": None
     }
+
+
 def final_response_node(state: ChatState):
 
     print("Running final response node")
@@ -99,17 +100,3 @@ graph_builder.add_edge("tool_executor", "final_response")
 graph_builder.add_edge("final_response", END)
 
 graph = graph_builder.compile()
-
-while True:
-
-    user_message = input("You: ")
-
-    result = graph.invoke(
-        {
-            "message": user_message
-        }
-    )
-
-    print("GROQ:", result["llm_output"])
-
-print(result)

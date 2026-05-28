@@ -1,28 +1,31 @@
 from llm import generate_response
 from memory import load_history, save_history
-
-conversation_history = load_history()
+from graph_bot import graph
+history = []
 
 while True:
 
-    message = input("You: ")
+    user_message = input("You: ")
 
-    conversation_history.append(
+    history.append(
         {
             "role": "user",
-            "content": message
+            "content": user_message
         }
     )
 
-    response = generate_response(conversation_history)
+    result = graph.invoke(
+        {
+            "message": user_message,
+            "history": history
+        }
+    )
 
-    conversation_history.append(
+    print("AI:", result["llm_output"])
+
+    history.append(
         {
             "role": "assistant",
-            "content": response
+            "content": result["llm_output"]
         }
     )
-
-    save_history(conversation_history)
-
-    print("AI:", response)
