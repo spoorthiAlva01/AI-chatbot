@@ -1,5 +1,6 @@
 from typing import TypedDict
 from langgraph.graph import StateGraph, START, END
+from tools.calculator import calculate
 
 class ChatState(TypedDict):
     message: str
@@ -27,15 +28,32 @@ def calculator_node(state: ChatState):
     }
 
 
-# router
-def route_message(state: ChatState):
 
-    message = state["message"]
 
-    if "*" in message:
-        return "calculator"
 
-    return END
+def tool_executor_node(state: ChatState):
+
+    print("Running tool executor node")
+
+    llm_output = state["llm_output"]
+
+    if llm_output.startswith("TOOL:"):
+
+        parts = llm_output.split(":")
+
+        tool_name = parts[1].strip()
+        tool_input = parts[2].strip()
+
+        if tool_name == "calculator":
+            result = calculate(tool_input)
+
+            return {
+                "tool_result": str(result)
+            }
+
+    return {
+        "tool_result": None
+    }
 
 
 graph_builder = StateGraph(ChatState)
